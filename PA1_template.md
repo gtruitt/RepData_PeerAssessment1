@@ -107,9 +107,11 @@ meanStepsByIntvl <- aggregate(
 
 names(meanStepsByIntvl) <- list("interval", "steps")
 
-substituteValues <- meanStepsByIntvl[meanStepsByIntvl$interval == intervalsMissingValues, 1]
+substituteValues <- meanStepsByIntvl[
+    meanStepsByIntvl$interval == intervalsMissingValues, 1]
 
-activity[rowsMissingValues, 1] <- substituteValues
+imputedActivity <- activity
+imputedActivity[rowsMissingValues, 1] <- substituteValues
 ```
 
 Mean of total steps taken per day for imputed data.
@@ -117,7 +119,7 @@ Mean of total steps taken per day for imputed data.
 
 ```r
 stepsPerDay <- aggregate(
-    activity$steps, by=list(activity$date), FUN=sum, na.rm=TRUE)
+    imputedActivity$steps, by=list(imputedActivity$date), FUN=sum, na.rm=TRUE)
 
 names(stepsPerDay) <- list("date", "steps")
 
@@ -141,3 +143,52 @@ median(stepsPerDay$steps)
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+
+```r
+activityWeekends <-
+    weekdays(as.Date(imputedActivity$date)) %in% list("Saturday", "Sunday")
+
+colNames <- names(imputedActivity)
+
+imputedActivity[activityWeekends, 4] <- "weekend"
+imputedActivity[!activityWeekends, 4] <- "weekday"
+
+names(imputedActivity) <- c(colNames, "daytype")
+
+imputedActivity$daytype <- as.factor(imputedActivity$daytype)
+
+weekendActivity = imputedActivity[imputedActivity$daytype == "weekend",]
+
+weekendIntvlFactor <- factor(sprintf("%04d", weekendActivity$interval))
+
+weekendMeanStepsByIntvl <- aggregate(
+    weekendActivity$steps, by=list(weekendIntvlFactor), FUN=mean, na.rm=TRUE)
+
+names(weekendMeanStepsByIntvl) <- list("interval", "steps")
+
+weekdayActivity = imputedActivity[imputedActivity$daytype == "weekday",]
+
+weekdayIntvlFactor <- factor(sprintf("%04d", weekdayActivity$interval))
+
+weekdayMeanStepsByIntvl <- aggregate(
+    weekdayActivity$steps, by=list(weekdayIntvlFactor), FUN=mean, na.rm=TRUE)
+
+names(weekdayMeanStepsByIntvl) <- list("interval", "steps")
+
+par(mfrow=c(2, 1))
+
+plot(weekendMeanStepsByIntvl$interval, weekendMeanStepsByIntvl$steps, type="n",
+     main="weekend", xlab=NULL, ylab=NULL)
+
+lines(weekendMeanStepsByIntvl$interval, weekendMeanStepsByIntvl$steps, type="l")
+
+plot(weekdayMeanStepsByIntvl$interval, weekdayMeanStepsByIntvl$steps, type="n",
+     main="weekday", xlab=NULL, ylab=NULL)
+
+lines(weekdayMeanStepsByIntvl$interval, weekdayMeanStepsByIntvl$steps, type="l")
+
+mtext("Number of steps", side=2, line=3, padj=0.5)
+mtext("Interval", side=1, line=3)
+```
+
+![](./PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
